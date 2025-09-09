@@ -165,7 +165,7 @@
       const tunnel = document.getElementById("tunnel-url").value.trim();
       if (!tunnel) return alert("请输入隧道地址");
 
-      const proxyUrl = "https://aistreams.online/?url=" + encodeURIComponent(tunnel + "/api/v1/env/list");
+      const proxyUrl = "https://api.aistreams.online/?url=" + encodeURIComponent(tunnel + "/api/v1/env/list");
       const res = await fetch(proxyUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -227,7 +227,7 @@
       if (ids.length === 0) return alert("未选择环境");
 
       for (const id of ids) {
-        const proxyUrl = "https://aistreams.online/?url=" + encodeURIComponent(tunnel + "/api/v1/browser/start");
+        const proxyUrl = "https://api.aistreams.online/?url=" + encodeURIComponent(tunnel + "/api/v1/browser/start");
         await fetch(proxyUrl, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -243,7 +243,7 @@
       if (ids.length === 0) return alert("未选择环境");
 
       for (const id of ids) {
-        const proxyUrl = "https://aistreams.online/?url=" + encodeURIComponent(tunnel + "/api/v1/browser/stop");
+        const proxyUrl = "https://api.aistreams.online/?url=" + encodeURIComponent(tunnel + "/api/v1/browser/stop");
         await fetch(proxyUrl, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -274,6 +274,7 @@
   </script>
 </body>
 </html>
+
 
 
 

@@ -144,6 +144,7 @@
     <div class="actions">
       <button onclick="openSelected()">打开选中</button>
       <button onclick="closeSelected()">关闭选中</button>
+      <button onclick="loginSelected()">登录选中</button>
     </div>
 
     <div class="pagination">
@@ -253,6 +254,28 @@
       alert("已发送关闭请求");
     }
 
+    async function loginSelected() {
+      const tunnel = document.getElementById("tunnel-url").value.trim();
+      const ids = getSelected();
+      if (ids.length === 0) return alert("未选择环境");
+
+      const res = await fetch("https://api.aistreams.online/autologin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          tunnelUrl: tunnel,
+          containerCodes: ids
+        })
+      });
+
+      const json = await res.json();
+      if (json.success) {
+        alert("🎵 自动登录成功！");
+      } else {
+        alert("❌ 自动登录失败: " + (json.error || JSON.stringify(json)));
+      }
+    }
+
     function prevPage() {
       if (currentPage > 1) {
         currentPage--;
@@ -274,7 +297,3 @@
   </script>
 </body>
 </html>
-
-
-
-

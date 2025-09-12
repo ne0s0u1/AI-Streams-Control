@@ -254,27 +254,40 @@
       alert("已发送关闭请求");
     }
 
-    async function loginSelected() {
-      const tunnel = document.getElementById("tunnel-url").value.trim();
-      const ids = getSelected();
-      if (ids.length === 0) return alert("未选择环境");
+   async function loginSelected() {
+    const tunnel = document.getElementById("tunnel-url").value.trim();
+    const ids = getSelected();
+    if (ids.length === 0) return alert("未选择环境");
 
-      const res = await fetch("https://api.aistreams.online/autologin", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          tunnelUrl: tunnel,
-          containerCodes: ids
-        })
-      });
-
-      const json = await res.json();
-      if (json.success) {
-        alert("🎵 自动登录成功！");
-      } else {
-        alert("❌ 自动登录失败: " + (json.error || JSON.stringify(json)));
-      }
+    // 👉 从环境列表里取账号（accounts[0].accountName）
+    const selectedEnvs = allData.filter(e => ids.includes(e.containerCode.toString()));
+    if (selectedEnvs.length === 0 || !selectedEnvs[0].accounts || selectedEnvs[0].accounts.length === 0) {
+      return alert("❌ 选中的环境没有账号信息");
     }
+    const accountName = selectedEnvs[0].accounts[0].accountName;
+
+    // 👉 你统一的密码（可以写死，或者以后放到前端输入框）
+    const password = "你的统一密码";
+
+    const res = await fetch("https://api.aistreams.online/autologin", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        tunnelUrl: tunnel,
+        containerCodes: ids,
+        accountName: accountName,
+        password: password
+      })
+    });
+
+    const json = await res.json();
+    if (json.success) {
+      alert("🎵 自动登录成功！");
+    } else {
+      alert("❌ 自动登录失败: " + (json.error || JSON.stringify(json)));
+    }
+  }
+
 
     function prevPage() {
       if (currentPage > 1) {
@@ -297,3 +310,4 @@
   </script>
 </body>
 </html>
+

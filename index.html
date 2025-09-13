@@ -16,7 +16,7 @@
       color: #9d4edd;
     }
     .container {
-      max-width: 1000px;
+      max-width: 1200px;
       margin: auto;
       background: #1f1f2e;
       padding: 20px;
@@ -36,6 +36,22 @@
     }
     button:hover {
       background: linear-gradient(135deg, #9d4edd, #7b2cbf);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+    th, td {
+      padding: 10px;
+      text-align: center;
+      border-bottom: 1px solid #333;
+    }
+    th {
+      background: #2a2a40;
+    }
+    tr:hover {
+      background: #33334d;
     }
     pre {
       background: #222;
@@ -60,7 +76,11 @@
       <button onclick="sendLog()">上报日志</button>
     </div>
 
-    <pre id="output">点击按钮测试接口...</pre>
+    <!-- 表格容器 -->
+    <div id="tableContainer"></div>
+
+    <!-- JSON 输出 -->
+    <pre id="output" style="display:none;"></pre>
   </div>
 
   <script>
@@ -69,19 +89,19 @@
     async function getAllSchedules() {
       const res = await fetch(`${API_BASE}/all-schedules`);
       const json = await res.json();
-      show(json);
+      renderTable(json);
     }
 
     async function getOneSchedule() {
       const res = await fetch(`${API_BASE}/schedule/user01`);
       const json = await res.json();
-      show(json);
+      showJSON(json);
     }
 
     async function getStats() {
       const res = await fetch(`${API_BASE}/stats`);
       const json = await res.json();
-      show(json);
+      showJSON(json);
     }
 
     async function sendLog() {
@@ -96,11 +116,50 @@
         })
       });
       const json = await res.json();
-      show(json);
+      showJSON(json);
     }
 
-    function show(data) {
-      document.getElementById("output").textContent = JSON.stringify(data, null, 2);
+    function renderTable(data) {
+      const container = document.getElementById("tableContainer");
+      let html = `
+        <table>
+          <thead>
+            <tr>
+              <th>账号ID</th>
+              <th>日期</th>
+              <th>开始时间</th>
+              <th>歌单</th>
+              <th>歌曲列表</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+      data.forEach(user => {
+        user.sessions.forEach(session => {
+          const songs = session.actions.map(a => `${a.song} (${a.duration}s${a.skip ? ", skip" : ""})`).join("<br>");
+          html += `
+            <tr>
+              <td>${user.account}</td>
+              <td>${user.date}</td>
+              <td>${session.start}</td>
+              <td>${session.playlist}</td>
+              <td>${songs}</td>
+            </tr>
+          `;
+        });
+      });
+      html += "</tbody></table>";
+      container.innerHTML = html;
+
+      // 隐藏 JSON 输出
+      document.getElementById("output").style.display = "none";
+    }
+
+    function showJSON(data) {
+      document.getElementById("tableContainer").innerHTML = "";
+      const pre = document.getElementById("output");
+      pre.style.display = "block";
+      pre.textContent = JSON.stringify(data, null, 2);
     }
   </script>
 </body>

@@ -118,7 +118,7 @@
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          account_id: "user01",
+          account_id: "user001",
           song_id: "track123",
           action: "play",
           duration: 200
@@ -136,11 +136,15 @@
       }
     
       try {
-        const res = await fetch(`${API_BASE}/generate-accounts/${count}`);
+        const res = await fetch(`${API_BASE}/generate-accounts`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ n: parseInt(count) })
+        });
         const data = await res.json();
         if (data.success) {
           document.getElementById("generateResult").innerText =
-            `✅ 已生成 ${data.count} 个账号 (示例: ${JSON.stringify(data.sample)})`;
+            `✅ 已生成 ${data.count} 个账号`;
         } else {
           document.getElementById("generateResult").innerText = "❌ 生成失败";
         }
@@ -149,6 +153,7 @@
         document.getElementById("generateResult").innerText = "❌ 请求失败: " + err.message;
       }
     }
+
 
 
     function renderTable(data) {
@@ -196,4 +201,5 @@
   </script>
 </body>
 </html>
+
 

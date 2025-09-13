@@ -2,7 +2,7 @@
 <html lang="zh">
 <head>
   <meta charset="UTF-8">
-  <title>AI Streams</title>
+  <title>Scheduler 控制台</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -11,12 +11,10 @@
       padding: 20px;
       margin: 0;
     }
-
     h1 {
       text-align: center;
       color: #9d4edd;
     }
-
     .container {
       max-width: 1000px;
       margin: auto;
@@ -25,23 +23,6 @@
       border-radius: 12px;
       box-shadow: 0 0 25px rgba(157, 78, 221, 0.5);
     }
-
-    .input-group {
-      margin-bottom: 15px;
-      display: flex;
-      gap: 10px;
-      align-items: center;
-    }
-
-    input, select {
-      flex: 1;
-      padding: 10px;
-      border: none;
-      border-radius: 6px;
-      background: #2a2a40;
-      color: #eee;
-    }
-
     button {
       padding: 10px 20px;
       border: none;
@@ -51,263 +32,76 @@
       background: linear-gradient(135deg, #7209b7, #560bad);
       color: #fff;
       transition: 0.3s;
+      margin-right: 10px;
     }
-
     button:hover {
       background: linear-gradient(135deg, #9d4edd, #7b2cbf);
     }
-
-    .table-container {
-      margin-top: 20px;
-      overflow-x: auto;
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-    }
-
-    th, td {
-      padding: 10px;
-      text-align: center;
-      border-bottom: 1px solid #333;
-    }
-
-    th {
-      background: #2a2a40;
-    }
-
-    tr:hover {
-      background: #33334d;
-    }
-
-    .actions {
-      margin-top: 15px;
-      display: flex;
-      justify-content: center;
-      gap: 15px;
-    }
-
-    .pagination {
-      margin-top: 15px;
-      display: flex;
-      justify-content: center;
-      gap: 10px;
-    }
-
-    .json-container {
-      margin-top: 15px;
-      display: none;
-      white-space: pre-wrap;
+    pre {
       background: #222;
+      color: #0ff;
       padding: 15px;
       border-radius: 8px;
       font-size: 14px;
-      color: #0ff;
-      max-height: 300px;
+      max-height: 400px;
       overflow-y: auto;
+      white-space: pre-wrap;
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>Hubstudio Remote Control</h1>
+    <h1>Scheduler 控制台</h1>
 
-    <div class="input-group">
-      <label>请输入隧道地址:</label>
-      <input type="text" id="tunnel-url" placeholder="例如：https://xxxx.trycloudflare.com">
-      <button onclick="listEnv()">获取环境列表</button>
-      <button onclick="toggleJSON()">展开/收起原始 JSON</button>
+    <div style="margin-bottom:15px;">
+      <button onclick="getAllSchedules()">获取全部日程</button>
+      <button onclick="getOneSchedule()">获取单个日程(user01)</button>
+      <button onclick="getStats()">查看统计</button>
+      <button onclick="sendLog()">上报日志</button>
     </div>
 
-    <div class="input-group">
-      <label>选择分组:</label>
-      <select id="groupFilter" onchange="applyFilter()">
-        <option value="all">全部</option>
-      </select>
-    </div>
-
-    <div class="table-container">
-      <table id="envTable">
-        <thead>
-          <tr>
-            <th><input type="checkbox" id="selectAll" onchange="toggleSelectAll(this)"></th>
-            <th>环境ID</th>
-            <th>环境名</th>
-            <th>分组</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-    </div>
-
-    <div class="actions">
-      <button onclick="openSelected()">打开选中</button>
-      <button onclick="closeSelected()">关闭选中</button>
-      <button onclick="loginSelected()">登录选中</button>
-    </div>
-
-    <div class="pagination">
-      <button onclick="prevPage()">上一页</button>
-      <span id="pageInfo">第 1 / 1 页</span>
-      <button onclick="nextPage()">下一页</button>
-    </div>
-
-    <div id="jsonOutput" class="json-container"></div>
+    <pre id="output">点击按钮测试接口...</pre>
   </div>
 
   <script>
-    let allData = [];
-    let filteredData = [];
-    let currentPage = 1;
-    const pageSize = 10;
+    const API_BASE = "https://api.aistreams.online";
 
-    async function listEnv() {
-      const tunnel = document.getElementById("tunnel-url").value.trim();
-      if (!tunnel) return alert("请输入隧道地址");
+    async function getAllSchedules() {
+      const res = await fetch(`${API_BASE}/all-schedules`);
+      const json = await res.json();
+      show(json);
+    }
 
-      const proxyUrl = "https://api.aistreams.online/?url=" + encodeURIComponent(tunnel + "/api/v1/env/list");
-      const res = await fetch(proxyUrl, {
+    async function getOneSchedule() {
+      const res = await fetch(`${API_BASE}/schedule/user01`);
+      const json = await res.json();
+      show(json);
+    }
+
+    async function getStats() {
+      const res = await fetch(`${API_BASE}/stats`);
+      const json = await res.json();
+      show(json);
+    }
+
+    async function sendLog() {
+      const res = await fetch(`${API_BASE}/log`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ current: 1, size: 200 })
+        body: JSON.stringify({
+          account_id: "user01",
+          song_id: "track123",
+          action: "play",
+          duration: 200
+        })
       });
-
       const json = await res.json();
-      allData = json.data.list || [];
-      filteredData = allData;
-
-      renderTable();
-      fillGroupFilter();
-      document.getElementById("jsonOutput").innerText = JSON.stringify(json, null, 2);
+      show(json);
     }
 
-    function fillGroupFilter() {
-      const select = document.getElementById("groupFilter");
-      const groups = [...new Set(allData.map(e => e.tagName || "未分组"))];
-      select.innerHTML = `<option value="all">全部</option>` + groups.map(g => `<option value="${g}">${g}</option>`).join("");
-    }
-
-    function applyFilter() {
-      const group = document.getElementById("groupFilter").value;
-      filteredData = group === "all" ? allData : allData.filter(e => e.tagName === group);
-      currentPage = 1;
-      renderTable();
-    }
-
-    function renderTable() {
-      const tbody = document.querySelector("#envTable tbody");
-      tbody.innerHTML = "";
-      const start = (currentPage - 1) * pageSize;
-      const pageItems = filteredData.slice(start, start + pageSize);
-
-      for (const env of pageItems) {
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-          <td><input type="checkbox" class="env-check" value="${env.containerCode}" checked></td>
-          <td>${env.containerCode}</td>
-          <td>${env.containerName}</td>
-          <td>${env.tagName || "未分组"}</td>
-        `;
-        tbody.appendChild(tr);
-      }
-      document.getElementById("pageInfo").innerText = `第 ${currentPage} / ${Math.ceil(filteredData.length / pageSize) || 1} 页`;
-    }
-
-    function toggleSelectAll(el) {
-      document.querySelectorAll(".env-check").forEach(cb => cb.checked = el.checked);
-    }
-
-    function getSelected() {
-      return Array.from(document.querySelectorAll(".env-check:checked")).map(cb => cb.value);
-    }
-
-    async function openSelected() {
-      const tunnel = document.getElementById("tunnel-url").value.trim();
-      const ids = getSelected();
-      if (ids.length === 0) return alert("未选择环境");
-
-      for (const id of ids) {
-        const proxyUrl = "https://api.aistreams.online/?url=" + encodeURIComponent(tunnel + "/api/v1/browser/start");
-        await fetch(proxyUrl, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ containerCode: id, isHeadless: false })
-        });
-      }
-      alert("已发送打开请求");
-    }
-
-    async function closeSelected() {
-      const tunnel = document.getElementById("tunnel-url").value.trim();
-      const ids = getSelected();
-      if (ids.length === 0) return alert("未选择环境");
-
-      for (const id of ids) {
-        const proxyUrl = "https://api.aistreams.online/?url=" + encodeURIComponent(tunnel + "/api/v1/browser/stop");
-        await fetch(proxyUrl, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ containerCode: id })
-        });
-      }
-      alert("已发送关闭请求");
-    }
-
-   async function loginSelected() {
-    const tunnel = document.getElementById("tunnel-url").value.trim();
-    const ids = getSelected();
-    if (ids.length === 0) return alert("未选择环境");
-
-    // 👉 从环境列表里取账号（accounts[0].accountName）
-    const selectedEnvs = allData.filter(e => ids.includes(e.containerCode.toString()));
-    if (selectedEnvs.length === 0 || !selectedEnvs[0].accounts || selectedEnvs[0].accounts.length === 0) {
-      return alert("❌ 选中的环境没有账号信息");
-    }
-    const accountName = selectedEnvs[0].accounts[0].accountName;
-
-    // 👉 你统一的密码（可以写死，或者以后放到前端输入框）
-    const password = "你的统一密码";
-
-    const res = await fetch("https://api.aistreams.online/autologin", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        tunnelUrl: tunnel,
-        containerCodes: ids,
-        accountName: accountName,
-        password: password
-      })
-    });
-
-    const json = await res.json();
-    if (json.success) {
-      alert("🎵 自动登录成功！");
-    } else {
-      alert("❌ 自动登录失败: " + (json.error || JSON.stringify(json)));
-    }
-  }
-
-
-    function prevPage() {
-      if (currentPage > 1) {
-        currentPage--;
-        renderTable();
-      }
-    }
-
-    function nextPage() {
-      if (currentPage < Math.ceil(filteredData.length / pageSize)) {
-        currentPage++;
-        renderTable();
-      }
-    }
-
-    function toggleJSON() {
-      const box = document.getElementById("jsonOutput");
-      box.style.display = box.style.display === "none" ? "block" : "none";
+    function show(data) {
+      document.getElementById("output").textContent = JSON.stringify(data, null, 2);
     }
   </script>
 </body>
 </html>
-

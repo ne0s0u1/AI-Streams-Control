@@ -69,6 +69,15 @@
   <div class="container">
     <h1>Scheduler 控制台</h1>
 
+    <div class="input-group">
+      <label for="accountCount">生成账号数量:</label>
+      <input type="number" id="accountCount" placeholder="例如：100">
+      <button onclick="generateAccounts()">生成账号</button>
+    </div>
+
+    <div id="generateResult" style="margin-top:10px; color:#0f0;"></div>
+
+
     <div style="margin-bottom:15px;">
       <button onclick="getAllSchedules()">获取全部日程</button>
       <button onclick="getOneSchedule()">获取单个日程(user01)</button>
@@ -119,6 +128,29 @@
       showJSON(json);
     }
 
+    async function generateAccounts() {
+      const count = document.getElementById("accountCount").value;
+      if (!count || count <= 0) {
+        alert("请输入有效的账号数量");
+        return;
+      }
+    
+      try {
+        const res = await fetch(`${API_BASE}/generate-accounts/${count}`);
+        const data = await res.json();
+        if (data.success) {
+          document.getElementById("generateResult").innerText =
+            `✅ 已生成 ${data.count} 个账号 (示例: ${JSON.stringify(data.sample)})`;
+        } else {
+          document.getElementById("generateResult").innerText = "❌ 生成失败";
+        }
+      } catch (err) {
+        console.error(err);
+        document.getElementById("generateResult").innerText = "❌ 请求失败: " + err.message;
+      }
+    }
+
+
     function renderTable(data) {
       const container = document.getElementById("tableContainer");
       let html = `
@@ -164,3 +196,4 @@
   </script>
 </body>
 </html>
+

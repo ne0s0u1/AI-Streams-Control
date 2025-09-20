@@ -63,7 +63,15 @@
       overflow-y: auto;
       white-space: pre-wrap;
     }
+    canvas {
+      margin-top: 20px;
+      background: #222;
+      border-radius: 8px;
+      padding: 10px;
+    }
   </style>
+  <!-- 引入 Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
   <div class="container">
@@ -77,13 +85,15 @@
 
     <div id="generateResult" style="margin-top:10px; color:#0f0;"></div>
 
-
     <div style="margin-bottom:15px;">
       <button onclick="getAllSchedules()">获取全部日程</button>
-      <button onclick="getOneSchedule()">获取单个日程(user01)</button>
+      <button onclick="getOneSchedule()">获取单个日程(user001)</button>
       <button onclick="getStats()">查看统计</button>
       <button onclick="sendLog()">上报日志</button>
     </div>
+
+    <!-- 图表容器 -->
+    <canvas id="statsChart" style="display:none;" height="120"></canvas>
 
     <!-- 表格容器 -->
     <div id="tableContainer"></div>
@@ -94,6 +104,7 @@
 
   <script>
     const API_BASE = "https://api.aistreams.online";
+    let statsChart = null;
 
     async function getAllSchedules() {
       const res = await fetch(`${API_BASE}/all-schedules`);
@@ -110,7 +121,7 @@
     async function getStats() {
       const res = await fetch(`${API_BASE}/stats`);
       const json = await res.json();
-      showJSON(json);
+      renderStats(json);
     }
 
     async function sendLog() {
@@ -154,8 +165,6 @@
       }
     }
 
-
-
     function renderTable(data) {
       const container = document.getElementById("tableContainer");
       let html = `
@@ -188,12 +197,79 @@
       html += "</tbody></table>";
       container.innerHTML = html;
 
-      // 隐藏 JSON 输出
+      document.getElementById("output").style.display = "none";
+      document.getElementById("statsChart").style.display = "none";
+    }
+
+    function renderStats(data) {
+      const container = document.getElementById("tableContainer");
+      let html = `
+        <h2>统计数据</h2>
+        <p>总播放量: <strong>${data.total}</strong></p>
+        <table>
+          <thead>
+            <tr>
+              <th>账号ID</th>
+              <th>总计</th>
+              <th>本月累计</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+
+      const labels = [];
+      const totals = [];
+
+      Object.entries(data.perAccount).forEach(([account, stats]) => {
+        if (account === "undefined") return; // 过滤掉 undefined
+        html += `
+          <tr>
+            <td>${account}</td>
+            <td>${stats.total}</td>
+            <td>${stats.month_to_date}</td>
+          </tr>
+        `;
+        labels.push(account);
+        totals.push(stats.total);
+      });
+
+      html += "</tbody></table>";
+      container.innerHTML = html;
+
+      // 显示图表
+      const ctx = document.getElementById("statsChart");
+      ctx.style.display = "block";
+
+      if (statsChart) statsChart.destroy(); // 避免重复绘制
+
+      statsChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: '总计播放量',
+            data: totals,
+            backgroundColor: '#9d4edd'
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { labels: { color: '#eee' } }
+          },
+          scales: {
+            x: { ticks: { color: '#eee' } },
+            y: { ticks: { color: '#eee' } }
+          }
+        }
+      });
+
       document.getElementById("output").style.display = "none";
     }
 
     function showJSON(data) {
       document.getElementById("tableContainer").innerHTML = "";
+      document.getElementById("statsChart").style.display = "none";
       const pre = document.getElementById("output");
       pre.style.display = "block";
       pre.textContent = JSON.stringify(data, null, 2);
@@ -201,6 +277,3 @@
   </script>
 </body>
 </html>
-
-
-

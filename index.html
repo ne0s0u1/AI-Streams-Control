@@ -90,8 +90,12 @@
     <div class="date-group">
       <label for="statsDate">选择日期:</label>
       <input type="date" id="statsDate">
-      <button onclick="getStats()">查看统计</button>
+      <button onclick="getStats()">查看每日统计</button>
+      <button onclick="getMonthly()">查看本月累计</button>
     </div>
+
+    <!-- 总播放量 -->
+    <div id="totalBox" style="margin:15px 0; font-size:18px; color:#0f0; font-weight:bold;"></div>
 
     <!-- 图表容器 -->
     <canvas id="statsChart" style="display:none;" height="120"></canvas>
@@ -144,11 +148,18 @@
       const url = date ? `${API_BASE}/stats?date=${date}` : `${API_BASE}/stats`;
       const res = await fetch(url);
       const json = await res.json();
-      renderStats(json);
+      renderStats(json, "daily");
     }
 
-    function renderStats(data) {
+    async function getMonthly() {
+      const res = await fetch(`${API_BASE}/stats`);
+      const json = await res.json();
+      renderStats(json, "monthly");
+    }
+
+    function renderStats(data, mode) {
       const container = document.getElementById("tableContainer");
+      const totalBox = document.getElementById("totalBox");
 
       // 排序账号
       const accounts = Object.entries(data.perAccount)
@@ -161,7 +172,7 @@
           <thead>
             <tr>
               <th>账号ID</th>
-              <th>今日播放</th>
+              ${mode === "daily" ? "<th>今日播放</th>" : ""}
               <th>本月累计</th>
             </tr>
           </thead>
@@ -171,24 +182,28 @@
       const labels = [];
       const monthValues = [];
       let totalMonth = 0;
+      let totalDaily = 0;
 
       accounts.forEach(([account, stats]) => {
-        html += `
-          <tr>
-            <td>${account}</td>
-            <td>${stats.daily_done ?? "-"}</td>
-            <td>${stats.month_to_date}</td>
-          </tr>
-        `;
+        html += `<tr><td>${account}</td>`;
+        if (mode === "daily") {
+          html += `<td>${stats.daily_done ?? "-"}</td>`;
+          totalDaily += stats.daily_done ?? 0;
+        }
+        html += `<td>${stats.month_to_date}</td></tr>`;
+
         labels.push(account);
         monthValues.push(stats.month_to_date);
         totalMonth += stats.month_to_date;
       });
 
-      html += `</tbody></table>
-        <p style="margin-top:10px;">全部账号本月累计播放量: <strong>${totalMonth}</strong></p>
-      `;
+      html += "</tbody></table>";
       container.innerHTML = html;
+
+      // 总播放量放上面
+      totalBox.innerHTML = mode === "daily"
+        ? `今日总播放量: <strong>${totalDaily}</strong> | 本月累计总播放量: <strong>${totalMonth}</strong>`
+        : `本月累计总播放量: <strong>${totalMonth}</strong>`;
 
       // 绘制图表
       const ctx = document.getElementById("statsChart");

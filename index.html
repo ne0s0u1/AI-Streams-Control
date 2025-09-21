@@ -32,7 +32,7 @@
       background: linear-gradient(135deg, #7209b7, #560bad);
       color: #fff;
       transition: 0.3s;
-      margin-right: 10px;
+      margin-left: 10px;
     }
     button:hover {
       background: linear-gradient(135deg, #9d4edd, #7b2cbf);
@@ -69,6 +69,9 @@
       border-radius: 8px;
       padding: 10px;
     }
+    .date-group {
+      margin-bottom: 15px;
+    }
   </style>
   <!-- 引入 Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -82,11 +85,11 @@
       <input type="number" id="accountCount" placeholder="例如：100">
       <button onclick="generateAccounts()">生成账号</button>
     </div>
-
     <div id="generateResult" style="margin-top:10px; color:#0f0;"></div>
 
-    <div style="margin-bottom:15px;">
-      <button onclick="getOneSchedule()">获取单个日程(API测试按钮)</button>
+    <div class="date-group">
+      <label for="statsDate">选择日期:</label>
+      <input type="date" id="statsDate">
       <button onclick="getStats()">查看统计</button>
     </div>
 
@@ -104,17 +107,11 @@
     const API_BASE = "https://api.aistreams.online";
     let statsChart = null;
 
-    async function getOneSchedule() {
-      const res = await fetch(`${API_BASE}/schedule/user001`);
-      const json = await res.json();
-      showJSON(json);
-    }
-
-    async function getStats() {
-      const res = await fetch(`${API_BASE}/stats`);
-      const json = await res.json();
-      renderStats(json);
-    }
+    // 默认设置日期选择器为今天
+    window.onload = () => {
+      const today = new Date().toISOString().split("T")[0];
+      document.getElementById("statsDate").value = today;
+    };
 
     async function generateAccounts() {
       const count = document.getElementById("accountCount").value;
@@ -142,14 +139,29 @@
       }
     }
 
+    async function getStats() {
+      const date = document.getElementById("statsDate").value;
+      const url = date ? `${API_BASE}/stats?date=${date}` : `${API_BASE}/stats`;
+      const res = await fetch(url);
+      const json = await res.json();
+      renderStats(json);
+    }
+
     function renderStats(data) {
       const container = document.getElementById("tableContainer");
+
+      // 排序账号
+      const accounts = Object.entries(data.perAccount)
+        .filter(([account]) => account !== "undefined")
+        .sort(([a], [b]) => a.localeCompare(b, 'zh', { numeric: true }));
+
       let html = `
         <h2>统计数据</h2>
         <table>
           <thead>
             <tr>
               <th>账号ID</th>
+              <th>今日播放</th>
               <th>本月累计</th>
             </tr>
           </thead>
@@ -160,11 +172,11 @@
       const monthValues = [];
       let totalMonth = 0;
 
-      Object.entries(data.perAccount).forEach(([account, stats]) => {
-        if (account === "undefined") return;
+      accounts.forEach(([account, stats]) => {
         html += `
           <tr>
             <td>${account}</td>
+            <td>${stats.daily_done ?? "-"}</td>
             <td>${stats.month_to_date}</td>
           </tr>
         `;
@@ -178,11 +190,10 @@
       `;
       container.innerHTML = html;
 
-      // 显示图表
+      // 绘制图表
       const ctx = document.getElementById("statsChart");
       ctx.style.display = "block";
-
-      if (statsChart) statsChart.destroy(); // 避免重复绘制
+      if (statsChart) statsChart.destroy();
 
       statsChart = new Chart(ctx, {
         type: 'bar',
@@ -196,9 +207,7 @@
         },
         options: {
           responsive: true,
-          plugins: {
-            legend: { labels: { color: '#eee' } }
-          },
+          plugins: { legend: { labels: { color: '#eee' } } },
           scales: {
             x: { ticks: { color: '#eee' } },
             y: { ticks: { color: '#eee' } }

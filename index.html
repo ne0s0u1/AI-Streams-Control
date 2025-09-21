@@ -145,26 +145,59 @@
 
     async function getStats() {
       const date = document.getElementById("statsDate").value;
-      const url = date ? `${API_BASE}/stats?date=${date}` : `${API_BASE}/stats`;
-      const res = await fetch(url);
-      const json = await res.json();
-      renderStats(json, "daily");
+      const res = await fetch(`${API_BASE}/logs.json`); // 获取完整日志
+      const logs = await res.json();
+      calculateAndRender(logs, date, "daily");
     }
 
     async function getMonthly() {
-      const res = await fetch(`${API_BASE}/stats`);
-      const json = await res.json();
-      renderStats(json, "monthly");
+      const res = await fetch(`${API_BASE}/logs.json`);
+      const logs = await res.json();
+      calculateAndRender(logs, null, "monthly");
     }
 
-    function renderStats(data, mode) {
-      const container = document.getElementById("tableContainer");
+    function calculateAndRender(logs, selectedDate, mode) {
       const totalBox = document.getElementById("totalBox");
 
-      // 排序账号
-      const accounts = Object.entries(data.perAccount)
-        .filter(([account]) => account !== "undefined")
-        .sort(([a], [b]) => a.localeCompare(b, 'zh', { numeric: true }));
+      // 每日播放量
+      let dailyTotal = 0;
+      let dailyByAccount = {};
+      if (mode === "daily" && selectedDate) {
+        const dailyLogs = logs.filter(l => l.date === selectedDate && l.account);
+        dailyLogs.forEach(l => {
+          dailyTotal += l.daily_done || 0;
+          dailyByAccount[l.account] = l.daily_done || 0;
+        });
+      }
+
+      // 本月累计：取每个账号最新一条记录
+      const latestByAccount = {};
+      logs.forEach(l => {
+        if (!l.account || !l.month_to_date) return;
+        if (!latestByAccount[l.account] || new Date(l.date) > new Date(latestByAccount[l.account].date)) {
+          latestByAccount[l.account] = l;
+        }
+      });
+
+      let monthTotal = 0;
+      Object.values(latestByAccount).forEach(l => {
+        monthTotal += l.month_to_date || 0;
+      });
+
+      // 更新UI
+      totalBox.innerHTML = mode === "daily"
+        ? `今日总播放量: <strong>${dailyTotal}</strong> | 本月累计总播放量: <strong>${monthTotal}</strong>`
+        : `本月累计总播放量: <strong>${monthTotal}</strong>`;
+
+      renderTable(dailyByAccount, latestByAccount, mode);
+    }
+
+    function renderTable(dailyByAccount, latestByAccount, mode) {
+      const container = document.getElementById("tableContainer");
+
+      const accounts = Object.keys(latestByAccount).sort((a, b) =>
+        a.localeCompare(b, 'zh', { numeric: true })
+      );
 
       let html = `
         <h2>统计数据</h2>
@@ -181,29 +214,20 @@
 
       const labels = [];
       const monthValues = [];
-      let totalMonth = 0;
-      let totalDaily = 0;
 
-      accounts.forEach(([account, stats]) => {
+      accounts.forEach(account => {
+        const month = latestByAccount[account].month_to_date;
+        const daily = dailyByAccount[account] ?? "-";
         html += `<tr><td>${account}</td>`;
-        if (mode === "daily") {
-          html += `<td>${stats.daily_done ?? "-"}</td>`;
-          totalDaily += stats.daily_done ?? 0;
-        }
-        html += `<td>${stats.month_to_date}</td></tr>`;
+        if (mode === "daily") html += `<td>${daily}</td>`;
+        html += `<td>${month}</td></tr>`;
 
         labels.push(account);
-        monthValues.push(stats.month_to_date);
-        totalMonth += stats.month_to_date;
+        monthValues.push(month);
       });
 
       html += "</tbody></table>";
       container.innerHTML = html;
-
-      // 总播放量放上面
-      totalBox.innerHTML = mode === "daily"
-        ? `今日总播放量: <strong>${totalDaily}</strong> | 本月累计总播放量: <strong>${totalMonth}</strong>`
-        : `本月累计总播放量: <strong>${totalMonth}</strong>`;
 
       // 绘制图表
       const ctx = document.getElementById("statsChart");
@@ -229,16 +253,6 @@
           }
         }
       });
-
-      document.getElementById("output").style.display = "none";
-    }
-
-    function showJSON(data) {
-      document.getElementById("tableContainer").innerHTML = "";
-      document.getElementById("statsChart").style.display = "none";
-      const pre = document.getElementById("output");
-      pre.style.display = "block";
-      pre.textContent = JSON.stringify(data, null, 2);
     }
   </script>
 </body>

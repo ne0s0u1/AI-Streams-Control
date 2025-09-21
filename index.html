@@ -104,12 +104,6 @@
     const API_BASE = "https://api.aistreams.online";
     let statsChart = null;
 
-    async function getAllSchedules() {
-      const res = await fetch(`${API_BASE}/all-schedules`);
-      const json = await res.json();
-      renderTable(json);
-    }
-
     async function getOneSchedule() {
       const res = await fetch(`${API_BASE}/schedule/user001`);
       const json = await res.json();
@@ -120,21 +114,6 @@
       const res = await fetch(`${API_BASE}/stats`);
       const json = await res.json();
       renderStats(json);
-    }
-
-    async function sendLog() {
-      const res = await fetch(`${API_BASE}/log`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          account_id: "user001",
-          song_id: "track123",
-          action: "play",
-          duration: 200
-        })
-      });
-      const json = await res.json();
-      showJSON(json);
     }
 
     async function generateAccounts() {
@@ -163,52 +142,14 @@
       }
     }
 
-    function renderTable(data) {
-      const container = document.getElementById("tableContainer");
-      let html = `
-        <table>
-          <thead>
-            <tr>
-              <th>账号ID</th>
-              <th>日期</th>
-              <th>开始时间</th>
-              <th>歌单</th>
-              <th>歌曲列表</th>
-            </tr>
-          </thead>
-          <tbody>
-      `;
-      data.forEach(user => {
-        user.sessions.forEach(session => {
-          const songs = session.actions.map(a => `${a.song} (${a.duration}s${a.skip ? ", skip" : ""})`).join("<br>");
-          html += `
-            <tr>
-              <td>${user.account}</td>
-              <td>${user.date}</td>
-              <td>${session.start}</td>
-              <td>${session.playlist}</td>
-              <td>${songs}</td>
-            </tr>
-          `;
-        });
-      });
-      html += "</tbody></table>";
-      container.innerHTML = html;
-
-      document.getElementById("output").style.display = "none";
-      document.getElementById("statsChart").style.display = "none";
-    }
-
     function renderStats(data) {
       const container = document.getElementById("tableContainer");
       let html = `
         <h2>统计数据</h2>
-        <p>总播放量: <strong>${data.total}</strong></p>
         <table>
           <thead>
             <tr>
               <th>账号ID</th>
-              <th>总计</th>
               <th>本月累计</th>
             </tr>
           </thead>
@@ -216,22 +157,25 @@
       `;
 
       const labels = [];
-      const totals = [];
+      const monthValues = [];
+      let totalMonth = 0;
 
       Object.entries(data.perAccount).forEach(([account, stats]) => {
-        if (account === "undefined") return; // 过滤掉 undefined
+        if (account === "undefined") return;
         html += `
           <tr>
             <td>${account}</td>
-            <td>${stats.total}</td>
             <td>${stats.month_to_date}</td>
           </tr>
         `;
         labels.push(account);
-        totals.push(stats.total);
+        monthValues.push(stats.month_to_date);
+        totalMonth += stats.month_to_date;
       });
 
-      html += "</tbody></table>";
+      html += `</tbody></table>
+        <p style="margin-top:10px;">全部账号本月累计播放量: <strong>${totalMonth}</strong></p>
+      `;
       container.innerHTML = html;
 
       // 显示图表
@@ -245,8 +189,8 @@
         data: {
           labels: labels,
           datasets: [{
-            label: '总计播放量',
-            data: totals,
+            label: '本月累计播放量',
+            data: monthValues,
             backgroundColor: '#9d4edd'
           }]
         },
@@ -275,5 +219,3 @@
   </script>
 </body>
 </html>
-
-
